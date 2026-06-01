@@ -1,0 +1,35 @@
+openapi: 3.1.0
+info:
+  title: Web Manga API
+  version: 0.1.0
+paths:
+  /manga:
+    get:
+      summary: List manga
+      responses:
+        "200":
+          description: Manga list
+  /manga/{mangaId}:
+    get:
+      summary: Get manga detail
+      parameters:
+        - name: mangaId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Manga detail
+  /manga/{mangaId}/chapters:
+    get:
+      summary: List chapters for a manga
+      parameters:
+        - name: mangaId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Chapter list
