@@ -18,6 +18,7 @@
 Raw layer detail and ERD: [raw-layer.md](raw-layer.md).
 Bronze layer detail and ERD: [bronze-layer.md](bronze-layer.md).
 Silver layer detail and ERD: [silver-layer.md](silver-layer.md).
+Gold layer detail and ERD: [gold-layer.md](gold-layer.md).
 
 ## Quality Checks
 

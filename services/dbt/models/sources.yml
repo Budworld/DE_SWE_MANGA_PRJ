@@ -1,0 +1,18 @@
+version: 2
+
+sources:
+  - name: silver
+    schema: silver
+    tables:
+      - name: manga
+      - name: chapter
+      - name: cover
+      - name: author
+      - name: tag
+      - name: scanlation_group
+      - name: manga_author
+      - name: manga_artist
+      - name: manga_tag
+      - name: manga_cover
+      - name: chapter_manga
+      - name: chapter_scanlation_group

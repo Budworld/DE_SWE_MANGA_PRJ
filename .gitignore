@@ -29,6 +29,10 @@ data/gold/*
 # Logs
 *.log
 logs/
+services/dbt/logs/
+services/dbt/target/
+services/dbt/dbt_packages/
+services/dbt/.user.yml
 
 # OS / IDE
 .DS_Store

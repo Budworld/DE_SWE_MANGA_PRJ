@@ -50,3 +50,29 @@ data/silver/mangadex/crawl_run_id=<crawl_run_id>/
   chapter_scanlation_group.jsonl
   transform_summary.json
 ```
+
+## Load Silver to PostgreSQL
+
+Install loader dependency:
+
+```powershell
+pip install -r services/data-pipeline/requirements.txt
+```
+
+Start PostgreSQL:
+
+```powershell
+docker compose up -d postgres
+```
+
+Load a Silver run into schema `silver`:
+
+```powershell
+python services/data-pipeline/load_silver_to_postgres.py --silver-run-dir "data/silver/mangadex/crawl_run_id=20260602T055219Z-0438e6fd" --overwrite
+```
+
+The default database URL is:
+
+```text
+postgresql://web_manga:web_manga@localhost:5432/web_manga
+```

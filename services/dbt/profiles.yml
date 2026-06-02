@@ -1,0 +1,12 @@
+web_manga:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('POSTGRES_HOST', 'localhost') }}"
+      port: "{{ env_var('POSTGRES_PORT', '5432') | int }}"
+      user: "{{ env_var('POSTGRES_USER', 'web_manga') }}"
+      pass: "{{ env_var('POSTGRES_PASSWORD', 'web_manga') }}"
+      dbname: "{{ env_var('POSTGRES_DB', 'web_manga') }}"
+      schema: dbt
+      threads: 4
