@@ -1,6 +1,6 @@
 # Data Model Draft
 
-## Core entities
+## Core Entities
 
 - `Manga`: title, alternative titles, description, status, authors, genres.
 - `Chapter`: manga id, chapter number, title, source, language, publish status.
@@ -8,17 +8,22 @@
 - `Translation`: chapter id, source language, target language, status, translated text, reviewer.
 - `Source`: crawl source metadata, terms, rate limit, adapter config.
 
-## Data layers
+## Data Layers
 
-- `raw`: HTML, images, metadata response giữ nguyên từ source.
-- `bronze`: dữ liệu đã parse sơ bộ, có schema cơ bản.
-- `silver`: dữ liệu đã clean, deduplicate, normalize.
-- `gold`: dữ liệu sẵn sàng cho API, search, analytics.
+- `raw`: source responses and crawl metadata stored as immutable artifacts.
+- `bronze`: parsed source-shaped records with light validation and lineage.
+- `silver`: cleaned, deduplicated, normalized domain records.
+- `gold`: API-ready, search-ready, and analytics-ready datasets.
 
-## Quality checks
+Raw layer detail and ERD: [raw-layer.md](raw-layer.md).
+Bronze layer detail and ERD: [bronze-layer.md](bronze-layer.md).
+Silver layer detail and ERD: [silver-layer.md](silver-layer.md).
+Gold layer detail and ERD: [gold-layer.md](gold-layer.md).
 
-- Manga title không rỗng.
-- Chapter thuộc một manga hợp lệ.
-- Page index liên tục trong mỗi chapter.
-- Image checksum dùng để phát hiện trùng.
-- Language code dùng ISO 639 khi có thể.
+## Quality Checks
+
+- Manga title is not empty.
+- Chapter belongs to a valid manga.
+- Page index is continuous within a chapter.
+- Image checksum can be used to detect duplicates.
+- Language code should follow ISO 639 where possible.

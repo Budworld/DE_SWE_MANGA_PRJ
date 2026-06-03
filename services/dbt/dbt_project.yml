@@ -1,0 +1,22 @@
+name: web_manga
+version: "0.1.0"
+config-version: 2
+
+profile: web_manga
+
+model-paths:
+  - models
+
+target-path: target
+clean-targets:
+  - target
+  - dbt_packages
+
+models:
+  web_manga:
+    staging:
+      +schema: staging
+      +materialized: view
+    marts:
+      +schema: gold
+      +materialized: table

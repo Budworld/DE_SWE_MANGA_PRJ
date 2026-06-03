@@ -1,0 +1,35 @@
+version: 2
+
+models:
+  - name: gold_manga_catalog
+    columns:
+      - name: manga_id
+        tests:
+          - not_null
+          - unique
+      - name: primary_title
+        tests:
+          - not_null
+
+  - name: gold_manga_detail
+    columns:
+      - name: manga_id
+        tests:
+          - not_null
+          - unique
+
+  - name: gold_chapter_list
+    columns:
+      - name: chapter_id
+        tests:
+          - not_null
+          - unique
+      - name: translated_language
+        tests:
+          - not_null
+
+  - name: gold_latest_chapters
+    columns:
+      - name: chapter_id
+        tests:
+          - not_null

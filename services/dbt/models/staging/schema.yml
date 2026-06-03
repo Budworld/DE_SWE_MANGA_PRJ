@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: stg_manga
+    columns:
+      - name: manga_id
+        tests:
+          - not_null
+          - unique
+      - name: source_manga_id
+        tests:
+          - not_null
+
+  - name: stg_chapter
+    columns:
+      - name: chapter_id
+        tests:
+          - not_null
+          - unique
+      - name: source_chapter_id
+        tests:
+          - not_null
+
+  - name: stg_author
+    columns:
+      - name: author_id
+        tests:
+          - not_null
+          - unique
+
+  - name: stg_tag
+    columns:
+      - name: tag_id
+        tests:
+          - not_null
+          - unique
