@@ -25,9 +25,9 @@ tag_names as (
 cover as (
     select distinct on (mc.source_manga_id)
         mc.source_manga_id,
-        c.file_name as cover_file_name
+        coalesce(mc.cover_file_name, c.file_name) as cover_file_name
     from {{ ref('stg_manga_cover') }} mc
-    join {{ ref('stg_cover') }} c on c.source_cover_id = mc.source_cover_id
+    left join {{ ref('stg_cover') }} c on c.source_cover_id = mc.source_cover_id
     order by mc.source_manga_id, c.updated_at desc nulls last
 )
 select

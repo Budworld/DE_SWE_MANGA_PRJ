@@ -114,7 +114,7 @@ def base_fields(record: dict[str, Any], transformed_at: str) -> dict[str, Any]:
     }
 
 
-def transform_manga(record: dict[str, Any], transformed_at: str) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
+def transform_manga(record: dict[str, Any], transformed_at: str) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     attributes = record.get("attributes") or {}
     source_manga_id = record["source_entity_id"]
     primary_title, primary_title_language = first_localized_value(attributes.get("title"))
@@ -160,7 +160,31 @@ def transform_manga(record: dict[str, Any], transformed_at: str) -> tuple[dict[s
             "silver_transformed_at": transformed_at,
         })
 
-    return output, errors, manga_tag_records
+    manga_cover_records = []
+    for relationship in record.get("relationships") or []:
+        if relationship.get("type") != "cover_art" or not relationship.get("id"):
+            continue
+
+        relationship_attributes = relationship.get("attributes") or {}
+        manga_cover_records.append({
+            "source": SOURCE,
+            "crawl_run_id": record["crawl_run_id"],
+            "from_entity_type": "manga",
+            "from_entity_id": source_manga_id,
+            "relationship_type": "cover_art",
+            "to_entity_type": "cover_art",
+            "to_entity_id": relationship["id"],
+            "source_manga_id": source_manga_id,
+            "source_cover_id": relationship["id"],
+            "cover_file_name": relationship_attributes.get("fileName"),
+            "cover_volume": relationship_attributes.get("volume"),
+            "cover_locale": relationship_attributes.get("locale"),
+            "bronze_record_id": record["bronze_record_id"],
+            "silver_schema_version": SILVER_SCHEMA_VERSION,
+            "silver_transformed_at": transformed_at,
+        })
+
+    return output, errors, manga_tag_records, manga_cover_records
 
 
 def transform_chapter(record: dict[str, Any], transformed_at: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -307,7 +331,6 @@ BRIDGE_TABLES = {
     ("manga", "author"): "manga_author",
     ("manga", "artist"): "manga_artist",
     ("manga", "tag"): "manga_tag",
-    ("manga", "cover_art"): "manga_cover",
     ("chapter", "manga"): "chapter_manga",
     ("chapter", "scanlation_group"): "chapter_scanlation_group",
 }
@@ -366,9 +389,11 @@ def run(bronze_run_dir: Path, output_root: Path, overwrite: bool) -> dict[str, A
 
         for record in records:
             if entity_type == "manga":
-                silver_record, record_errors, manga_tag_records = transformer(record, transformed_at)
+                silver_record, record_errors, manga_tag_records, manga_cover_records = transformer(record, transformed_at)
                 append_jsonl(output_run_dir / "manga_tag.jsonl", manga_tag_records)
+                append_jsonl(output_run_dir / "manga_cover.jsonl", manga_cover_records)
                 bridge_counts["manga_tag"] += len(manga_tag_records)
+                bridge_counts["manga_cover"] += len(manga_cover_records)
             else:
                 silver_record, record_errors = transformer(record, transformed_at)
             silver_records.append(silver_record)

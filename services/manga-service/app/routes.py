@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from psycopg import Connection
 
 from app.config import get_settings
 from app.db import get_connection
+from app.mangadex_client import MangaDexAtHomeClient
 from app.repositories import MangaRepository
 from app.schemas import (
     ChapterListItem,
+    ChapterPagesResponse,
     HealthResponse,
     LatestChapterItem,
     MangaCatalogItem,
@@ -23,6 +25,10 @@ router = APIRouter()
 
 def get_repository(connection: Annotated[Connection, Depends(get_connection)]) -> MangaRepository:
     return MangaRepository(connection)
+
+
+def get_at_home_client() -> MangaDexAtHomeClient:
+    return MangaDexAtHomeClient()
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -47,6 +53,18 @@ def list_manga(
         offset=offset,
     )
     return PaginatedResponse(items=rows, limit=limit, offset=offset, count=count)
+
+
+@router.get("/chapters/{source_chapter_id}/pages", response_model=ChapterPagesResponse)
+def get_chapter_pages(
+    source_chapter_id: str,
+    at_home_client: Annotated[MangaDexAtHomeClient, Depends(get_at_home_client)],
+    quality: Literal["data_saver", "full"] = "data_saver",
+) -> ChapterPagesResponse:
+    try:
+        return at_home_client.get_chapter_pages(source_chapter_id=source_chapter_id, quality=quality)
+    except Exception as error:
+        raise HTTPException(status_code=502, detail="Failed to fetch MangaDex chapter pages") from error
 
 
 @router.get("/manga/{manga_id}", response_model=MangaDetail)

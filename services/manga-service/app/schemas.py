@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Generic, TypeVar
+from typing import Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -36,6 +36,7 @@ class MangaCatalogItem(BaseModel):
     tag_names: list[str] = Field(default_factory=list)
     author_names: list[str] = Field(default_factory=list)
     cover_file_name: str | None = None
+    cover_url: str | None = None
     latest_uploaded_chapter: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
@@ -58,6 +59,7 @@ class MangaDetail(BaseModel):
     author_names: list[str] = Field(default_factory=list)
     artist_names: list[str] = Field(default_factory=list)
     cover_file_name: str | None = None
+    cover_url: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -87,9 +89,24 @@ class LatestChapterItem(BaseModel):
     manga_id: str | None = None
     manga_title: str | None = None
     cover_file_name: str | None = None
+    cover_url: str | None = None
     title: str | None = None
     chapter_number: str | None = None
     translated_language: str | None = None
     pages: int | None = None
     publish_at: datetime | None = None
     readable_at: datetime | None = None
+
+
+class ChapterPageItem(BaseModel):
+    page_index: int
+    file_name: str
+    image_url: str
+
+
+class ChapterPagesResponse(BaseModel):
+    source_chapter_id: str
+    quality: Literal["data_saver", "full"]
+    base_url: str
+    hash: str
+    pages: list[ChapterPageItem]

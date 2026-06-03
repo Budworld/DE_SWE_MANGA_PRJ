@@ -47,6 +47,11 @@ class MangaRepository:
                 coalesce(tag_names, '[]'::jsonb) as tag_names,
                 coalesce(author_names, '[]'::jsonb) as author_names,
                 cover_file_name,
+                case
+                    when source_manga_id is not null and cover_file_name is not null
+                    then concat('https://uploads.mangadex.org/covers/', source_manga_id, '/', cover_file_name)
+                    else null
+                end as cover_url,
                 latest_uploaded_chapter,
                 created_at,
                 updated_at
@@ -82,6 +87,11 @@ class MangaRepository:
                 coalesce(author_names, '[]'::jsonb) as author_names,
                 coalesce(artist_names, '[]'::jsonb) as artist_names,
                 cover_file_name,
+                case
+                    when source_manga_id is not null and cover_file_name is not null
+                    then concat('https://uploads.mangadex.org/covers/', source_manga_id, '/', cover_file_name)
+                    else null
+                end as cover_url,
                 created_at,
                 updated_at
             from gold.gold_manga_detail
@@ -162,6 +172,11 @@ class MangaRepository:
                 manga_id,
                 manga_title,
                 cover_file_name,
+                case
+                    when source_manga_id is not null and cover_file_name is not null
+                    then concat('https://uploads.mangadex.org/covers/', source_manga_id, '/', cover_file_name)
+                    else null
+                end as cover_url,
                 title,
                 chapter_number,
                 translated_language,
