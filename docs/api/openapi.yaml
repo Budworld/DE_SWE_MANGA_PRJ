@@ -111,3 +111,25 @@ paths:
       responses:
         "200":
           description: Paginated latest chapters
+  /chapters/{source_chapter_id}/pages:
+    get:
+      summary: Get MangaDex chapter page image URLs
+      parameters:
+        - name: source_chapter_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: quality
+          in: query
+          schema:
+            type: string
+            enum:
+              - data_saver
+              - full
+            default: data_saver
+      responses:
+        "200":
+          description: Chapter page image URLs
+        "422":
+          description: Invalid quality

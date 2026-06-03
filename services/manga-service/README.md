@@ -60,6 +60,7 @@ GET /manga
 GET /manga/{manga_id}
 GET /manga/{manga_id}/chapters
 GET /chapters/latest
+GET /chapters/{source_chapter_id}/pages
 ```
 
 Query examples:
@@ -69,7 +70,14 @@ curl http://localhost:8000/health
 curl "http://localhost:8000/manga?limit=10&offset=0"
 curl "http://localhost:8000/manga?status=ongoing&original_language=ja"
 curl "http://localhost:8000/chapters/latest?translated_language=en&limit=10"
+curl "http://localhost:8000/chapters/<source_chapter_id>/pages?quality=data_saver"
 ```
+
+Image behavior:
+
+- `cover_url` is computed from MangaDex `source_manga_id + cover_file_name`.
+- Chapter page URLs are fetched live from MangaDex at-home metadata.
+- Page image metadata is not persisted in Raw/Bronze/Silver yet.
 
 ## Tests
 
@@ -77,10 +85,18 @@ curl "http://localhost:8000/chapters/latest?translated_language=en&limit=10"
 & "C:\Users\ASUS\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" -m pytest services/manga-service/tests
 ```
 
-Expected verification for Milestone 2:
+Expected verification:
 
 ```text
-pytest: 7 passed
+pytest: 9 passed
 dbt build: PASS=34 WARN=0 ERROR=0
 Docker /health: 200
 ```
+
+Reader endpoint note:
+
+```text
+GET /chapters/{source_chapter_id}/pages
+```
+
+This endpoint calls MangaDex at-home live. If the current network/proxy blocks that endpoint, the API returns `502` and the web reader shows an error state.
