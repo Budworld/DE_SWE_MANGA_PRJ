@@ -8,6 +8,49 @@ Monorepo skeleton for a manga web platform that combines SWE, DE, and AI work:
 
 Current source is **MangaDex only**. Other sources can be added later through source adapters, but Milestone 1 focuses on building a clean data foundation first.
 
+## Milestone 2: Manga Catalog API
+
+Milestone 2 exposes dbt Gold tables through a read-only FastAPI service:
+
+```text
+PostgreSQL gold tables
+  -> services/manga-service
+  -> future web app
+```
+
+API endpoints:
+
+```text
+GET /health
+GET /manga
+GET /manga/{manga_id}
+GET /manga/{manga_id}/chapters
+GET /chapters/latest
+```
+
+Run locally:
+
+```powershell
+docker compose up -d postgres
+& "C:\Users\ASUS\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Scripts\dbt.exe" build --project-dir services/dbt --profiles-dir services/dbt
+& "C:\Users\ASUS\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" -m pip install -r services/manga-service/requirements.txt
+& "C:\Users\ASUS\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" -m uvicorn app.main:app --app-dir services/manga-service --host 0.0.0.0 --port 8000
+```
+
+Smoke:
+
+```powershell
+curl http://localhost:8000/health
+curl "http://localhost:8000/manga?limit=10&offset=0"
+curl "http://localhost:8000/chapters/latest?limit=10"
+```
+
+Detailed Milestone 2 architecture, build, run, and test docs:
+
+```text
+docs/architecture/milestone-2-manga-api.md
+```
+
 ## Milestone 1: Local DE Pipeline MVP
 
 Milestone 1 proves that the project can ingest MangaDex data and transform it through a complete local data pipeline:

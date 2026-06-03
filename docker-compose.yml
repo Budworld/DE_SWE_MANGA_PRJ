@@ -10,6 +10,15 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  manga-service:
+    build: ./services/manga-service
+    environment:
+      DATABASE_URL: postgresql://web_manga:web_manga@postgres:5432/web_manga
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+
   redis:
     image: redis:7-alpine
     ports:
