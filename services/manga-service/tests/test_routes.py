@@ -3,7 +3,8 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.routes import get_repository
+from app.routes import get_at_home_client, get_repository
+from app.schemas import ChapterPageItem, ChapterPagesResponse
 
 
 class FakeRepository:
@@ -23,6 +24,7 @@ class FakeRepository:
                     "tag_names": ["Action"],
                     "author_names": ["Author"],
                     "cover_file_name": "cover.jpg",
+                    "cover_url": "https://uploads.mangadex.org/covers/1/cover.jpg",
                     "latest_uploaded_chapter": "chapter-1",
                     "created_at": None,
                     "updated_at": None,
@@ -51,6 +53,7 @@ class FakeRepository:
             "author_names": ["Author"],
             "artist_names": ["Artist"],
             "cover_file_name": "cover.jpg",
+            "cover_url": "https://uploads.mangadex.org/covers/1/cover.jpg",
             "created_at": None,
             "updated_at": None,
         }
@@ -89,6 +92,7 @@ class FakeRepository:
                     "manga_id": "mangadex:manga:1",
                     "manga_title": "Example Manga",
                     "cover_file_name": "cover.jpg",
+                    "cover_url": "https://uploads.mangadex.org/covers/1/cover.jpg",
                     "title": "Chapter 1",
                     "chapter_number": "1",
                     "translated_language": "en",
@@ -101,12 +105,35 @@ class FakeRepository:
         )
 
 
+class FakeAtHomeClient:
+    def get_chapter_pages(self, source_chapter_id: str, quality: str):
+        folder = "data-saver" if quality == "data_saver" else "data"
+        return ChapterPagesResponse(
+            source_chapter_id=source_chapter_id,
+            quality=quality,
+            base_url="https://uploads.mangadex.org",
+            hash="hash",
+            pages=[
+                ChapterPageItem(
+                    page_index=1,
+                    file_name="page.jpg",
+                    image_url=f"https://uploads.mangadex.org/{folder}/hash/page.jpg",
+                )
+            ],
+        )
+
+
 def override_repository() -> FakeRepository:
     return FakeRepository()
 
 
+def override_at_home_client() -> FakeAtHomeClient:
+    return FakeAtHomeClient()
+
+
 def client() -> TestClient:
     app.dependency_overrides[get_repository] = override_repository
+    app.dependency_overrides[get_at_home_client] = override_at_home_client
     return TestClient(app)
 
 
@@ -123,6 +150,7 @@ def test_list_manga_returns_paginated_items() -> None:
     assert body["limit"] == 10
     assert body["offset"] == 0
     assert body["items"][0]["primary_title"] == "Example Manga"
+    assert body["items"][0]["cover_url"] == "https://uploads.mangadex.org/covers/1/cover.jpg"
 
 
 def test_get_manga_detail_returns_404_for_missing_manga() -> None:
@@ -136,6 +164,7 @@ def test_get_manga_detail_returns_item() -> None:
 
     assert response.status_code == 200
     assert response.json()["manga_id"] == "mangadex:manga:1"
+    assert response.json()["cover_url"] == "https://uploads.mangadex.org/covers/1/cover.jpg"
 
 
 def test_list_chapters_for_manga_returns_paginated_items() -> None:
@@ -154,9 +183,26 @@ def test_latest_chapters_returns_paginated_items() -> None:
     body = response.json()
     assert body["count"] == 1
     assert body["items"][0]["chapter_id"] == "mangadex:chapter:1"
+    assert body["items"][0]["cover_url"] == "https://uploads.mangadex.org/covers/1/cover.jpg"
 
 
 def test_invalid_limit_returns_validation_error() -> None:
     response = client().get("/manga?limit=101")
+
+    assert response.status_code == 422
+
+
+def test_get_chapter_pages_returns_image_urls() -> None:
+    response = client().get("/chapters/chapter-1/pages?quality=full")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["source_chapter_id"] == "chapter-1"
+    assert body["quality"] == "full"
+    assert body["pages"][0]["image_url"] == "https://uploads.mangadex.org/data/hash/page.jpg"
+
+
+def test_invalid_chapter_page_quality_returns_validation_error() -> None:
+    response = client().get("/chapters/chapter-1/pages?quality=tiny")
 
     assert response.status_code == 422

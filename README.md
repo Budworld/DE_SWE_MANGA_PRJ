@@ -51,6 +51,43 @@ Detailed Milestone 2 architecture, build, run, and test docs:
 docs/architecture/milestone-2-manga-api.md
 ```
 
+## Milestone 3: Web Reader Preview
+
+Milestone 3 adds a React/Vite web UI with real MangaDex images:
+
+```text
+Gold tables -> manga-service API -> web UI
+                           |
+                           -> cover_url
+                           -> chapter page image URLs
+```
+
+Views:
+
+```text
+/catalog
+/manga/:manga_id
+/latest
+/chapters/:source_chapter_id/read
+```
+
+Run:
+
+```powershell
+docker compose up -d postgres
+& "C:\Users\ASUS\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Scripts\dbt.exe" build --project-dir services/dbt --profiles-dir services/dbt
+& "C:\Users\ASUS\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" -m uvicorn app.main:app --app-dir services/manga-service --host 0.0.0.0 --port 8000
+cd apps/web
+npm install
+npm run dev
+```
+
+Detailed docs:
+
+```text
+docs/architecture/milestone-3-web-reader-preview.md
+```
+
 ## Milestone 1: Local DE Pipeline MVP
 
 Milestone 1 proves that the project can ingest MangaDex data and transform it through a complete local data pipeline:
