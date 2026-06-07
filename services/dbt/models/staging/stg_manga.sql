@@ -1,3 +1,13 @@
+with ranked as (
+    select
+        record,
+        row_number() over (
+            partition by record->>'manga_id'
+            order by loaded_at desc, id desc
+        ) as row_number
+    from {{ source('silver', 'manga') }}
+)
+
 select
     record->>'manga_id' as manga_id,
     record->>'source_manga_id' as source_manga_id,
@@ -15,4 +25,5 @@ select
     nullif(record->>'created_at', '')::timestamptz as created_at,
     nullif(record->>'updated_at', '')::timestamptz as updated_at,
     record->>'crawl_run_id' as crawl_run_id
-from {{ source('silver', 'manga') }}
+from ranked
+where row_number = 1

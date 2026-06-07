@@ -1,3 +1,13 @@
+with ranked as (
+    select
+        record,
+        row_number() over (
+            partition by record->>'chapter_id'
+            order by loaded_at desc, id desc
+        ) as row_number
+    from {{ source('silver', 'chapter') }}
+)
+
 select
     record->>'chapter_id' as chapter_id,
     record->>'source_chapter_id' as source_chapter_id,
@@ -14,4 +24,5 @@ select
     nullif(record->>'created_at', '')::timestamptz as created_at,
     nullif(record->>'updated_at', '')::timestamptz as updated_at,
     record->>'crawl_run_id' as crawl_run_id
-from {{ source('silver', 'chapter') }}
+from ranked
+where row_number = 1

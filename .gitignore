@@ -34,6 +34,7 @@ services/dbt/logs/
 services/dbt/target/
 services/dbt/dbt_packages/
 services/dbt/.user.yml
+services/airflow/logs/
 
 # OS / IDE
 .DS_Store

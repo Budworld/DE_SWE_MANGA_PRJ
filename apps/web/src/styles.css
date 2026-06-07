@@ -146,6 +146,33 @@ h1 {
   gap: 18px;
 }
 
+.catalog-summary {
+  color: #607080;
+  font-size: 14px;
+  margin: -8px 0 16px;
+}
+
+.load-more-row {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0 6px;
+}
+
+.load-more-row button {
+  min-width: 160px;
+  height: 42px;
+  border: 1px solid #1f2933;
+  border-radius: 8px;
+  background: #1f2933;
+  color: #fff;
+  cursor: pointer;
+}
+
+.load-more-row button:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
 .manga-card,
 .latest-row,
 .chapter-row {

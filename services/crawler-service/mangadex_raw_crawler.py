@@ -145,6 +145,7 @@ def crawl_collection(
     endpoint: str,
     limit: int,
     pages: int,
+    start_offset: int,
     timeout_seconds: int,
     pause_seconds: float,
     extra_params: dict[str, Any] | None = None,
@@ -153,7 +154,7 @@ def crawl_collection(
     for page_index in range(pages):
         params = {
             "limit": limit,
-            "offset": page_index * limit,
+            "offset": start_offset + page_index * limit,
         }
         if extra_params:
             params.update(extra_params)
@@ -198,6 +199,7 @@ def main() -> None:
     parser.add_argument("--output-root", default="data/raw", help="Raw data output root.")
     parser.add_argument("--limit", type=int, default=10, help="Items per API request.")
     parser.add_argument("--pages", type=int, default=1, help="Pages per collection endpoint.")
+    parser.add_argument("--start-offset", type=int, default=0, help="Starting MangaDex collection offset for paginated endpoints.")
     parser.add_argument("--timeout-seconds", type=int, default=30)
     parser.add_argument("--pause-seconds", type=float, default=1.0)
     parser.add_argument("--translated-language", default="en")
@@ -221,6 +223,7 @@ def main() -> None:
     try:
         for entity_type, endpoint, extra_params in endpoints:
             endpoint_pages = 1 if entity_type == "tag" else args.pages
+            endpoint_start_offset = 0 if entity_type == "tag" else args.start_offset
             written_files.extend(
                 crawl_collection(
                     output_root=output_root,
@@ -229,6 +232,7 @@ def main() -> None:
                     endpoint=endpoint,
                     limit=args.limit,
                     pages=endpoint_pages,
+                    start_offset=endpoint_start_offset,
                     timeout_seconds=args.timeout_seconds,
                     pause_seconds=args.pause_seconds,
                     extra_params=extra_params,

@@ -8,6 +8,63 @@ Monorepo skeleton for a manga web platform that combines SWE, DE, and AI work:
 
 Current source is **MangaDex only**. Other sources can be added later through source adapters, but Milestone 1 focuses on building a clean data foundation first.
 
+## Milestone 4: Airflow Orchestration
+
+Milestone 4 adds Airflow to run the existing DE pipeline end to end:
+
+```text
+Airflow DAG
+  -> crawl MangaDex Raw
+  -> Raw to Bronze
+  -> Bronze to Silver
+  -> load Silver to PostgreSQL
+  -> dbt build Gold
+  -> validate Gold row counts
+```
+
+Airflow is orchestration only. Python scripts still own Raw/Bronze/Silver processing, dbt still owns Gold, and `manga-service` plus the web UI still read only from Gold.
+
+Run Airflow locally:
+
+```powershell
+docker compose up airflow-init
+docker compose up -d postgres airflow-webserver airflow-scheduler
+```
+
+Open:
+
+```text
+http://localhost:8080
+```
+
+Login:
+
+```text
+admin / admin
+```
+
+Trigger this DAG manually:
+
+```text
+mangadex_data_pipeline
+```
+
+Default DAG params are small for demo:
+
+```text
+limit=10
+pages=1
+start_offset=0
+pause_seconds=0.5
+translated_language=en
+```
+
+Detailed docs:
+
+```text
+docs/architecture/milestone-4-airflow-orchestration.md
+```
+
 ## Milestone 2: Manga Catalog API
 
 Milestone 2 exposes dbt Gold tables through a read-only FastAPI service:
@@ -126,6 +183,7 @@ services/
   crawler-service/             MangaDex crawler and future source adapters
   data-pipeline/               Raw -> Bronze -> Silver loaders and transforms
   dbt/                         dbt project for Silver -> Gold
+  airflow/                     Airflow DAGs and orchestration docs
   api-gateway/                 Future API gateway
   manga-service/               Future manga domain service
   auth-service/                Future auth service
@@ -154,7 +212,7 @@ It calls public MangaDex API endpoints and stores each response as a raw artifac
 Run:
 
 ```powershell
-& "C:\Users\ASUS\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" services/crawler-service/mangadex_raw_crawler.py --limit 10 --pages 1 --pause-seconds 0.5
+& "C:\Users\ASUS\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" services/crawler-service/mangadex_raw_crawler.py --limit 10 --pages 1 --start-offset 0 --pause-seconds 0.5
 ```
 
 Current crawled entity types:
