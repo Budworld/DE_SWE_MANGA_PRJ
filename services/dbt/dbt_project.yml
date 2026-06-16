@@ -20,3 +20,6 @@ models:
     marts:
       +schema: gold
       +materialized: table
+    monitoring:
+      +schema: monitoring
+      +materialized: view

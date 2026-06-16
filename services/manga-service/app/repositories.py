@@ -195,3 +195,190 @@ class MangaRepository:
             cursor.execute(data_sql, params)
             rows = cursor.fetchall()
         return rows, total
+
+    def admin_health(self) -> dict[str, str]:
+        with self.connection.cursor() as cursor:
+            cursor.execute("select current_database() as database")
+            row = cursor.fetchone()
+        return {"database": row["database"]}
+
+    def pipeline_runs(self, limit: int) -> list[dict[str, Any]]:
+        sql = """
+            select
+                crawl_run_id,
+                max(loaded_at) as loaded_at,
+                count(*) filter (where source_table = 'manga') as manga_rows,
+                count(*) filter (where source_table = 'chapter') as chapter_rows,
+                count(*) filter (where source_table = 'cover') as cover_rows,
+                count(*) filter (where source_table = 'author') as author_rows,
+                count(*) filter (where source_table = 'tag') as tag_rows,
+                count(*) filter (where source_table = 'scanlation_group') as scanlation_group_rows
+            from (
+                select crawl_run_id, loaded_at, 'manga' as source_table from silver.manga
+                union all
+                select crawl_run_id, loaded_at, 'chapter' as source_table from silver.chapter
+                union all
+                select crawl_run_id, loaded_at, 'cover' as source_table from silver.cover
+                union all
+                select crawl_run_id, loaded_at, 'author' as source_table from silver.author
+                union all
+                select crawl_run_id, loaded_at, 'tag' as source_table from silver.tag
+                union all
+                select crawl_run_id, loaded_at, 'scanlation_group' as source_table from silver.scanlation_group
+            ) counts
+            group by crawl_run_id
+            order by loaded_at desc nulls last, crawl_run_id desc
+            limit %(limit)s
+        """
+        with self.connection.cursor() as cursor:
+            cursor.execute(sql, {"limit": limit})
+            return cursor.fetchall()
+
+    def gold_table_counts(self) -> list[dict[str, Any]]:
+        sql = """
+            select 'gold_manga_catalog' as table_name, count(*)::bigint as row_count from gold.gold_manga_catalog
+            union all
+            select 'gold_manga_detail' as table_name, count(*)::bigint as row_count from gold.gold_manga_detail
+            union all
+            select 'gold_chapter_list' as table_name, count(*)::bigint as row_count from gold.gold_chapter_list
+            union all
+            select 'gold_latest_chapters' as table_name, count(*)::bigint as row_count from gold.gold_latest_chapters
+        """
+        with self.connection.cursor() as cursor:
+            cursor.execute(sql)
+            return cursor.fetchall()
+
+    def pipeline_summary(self) -> dict[str, Any]:
+        sql = """
+            with latest_run as (
+                select crawl_run_id, max(loaded_at) as loaded_at
+                from silver.manga
+                group by crawl_run_id
+                order by loaded_at desc nulls last, crawl_run_id desc
+                limit 1
+            )
+            select
+                (select crawl_run_id from latest_run) as latest_crawl_run_id,
+                (select loaded_at from latest_run) as latest_loaded_at,
+                (select count(*) from silver.manga)::bigint as silver_manga_rows,
+                (select count(distinct record->>'manga_id') from silver.manga)::bigint as silver_distinct_manga,
+                (select count(*) from silver.chapter)::bigint as silver_chapter_rows,
+                (select count(distinct record->>'chapter_id') from silver.chapter)::bigint as silver_distinct_chapters,
+                (select count(*) from gold.gold_manga_catalog)::bigint as gold_manga_count,
+                (select count(*) from gold.gold_chapter_list)::bigint as gold_chapter_count,
+                (select count(*) from gold.gold_latest_chapters)::bigint as gold_latest_chapter_count
+        """
+        with self.connection.cursor() as cursor:
+            cursor.execute(sql)
+            row = cursor.fetchone()
+            cursor.execute("select to_regclass('public.dag_run') as dag_run_table")
+            if cursor.fetchone()["dag_run_table"]:
+                cursor.execute(
+                    """
+                    select state
+                    from public.dag_run
+                    where dag_id = 'mangadex_data_pipeline'
+                    order by execution_date desc
+                    limit 1
+                    """
+                )
+                dag_run = cursor.fetchone()
+                row["latest_airflow_dag_state"] = dag_run["state"] if dag_run else None
+            else:
+                row["latest_airflow_dag_state"] = None
+        row["gold_table_counts"] = self.gold_table_counts()
+        return row
+
+    def data_quality_checks(self) -> list[dict[str, Any]]:
+        sql = """
+            with checks as (
+                select 'gold_manga_catalog_not_empty' as check_name, count(*)::bigint as metric_value, 'fail' as severity
+                from gold.gold_manga_catalog
+                union all
+                select 'gold_chapter_list_not_empty' as check_name, count(*)::bigint as metric_value, 'fail' as severity
+                from gold.gold_chapter_list
+                union all
+                select 'duplicate_gold_manga_ids' as check_name, count(*)::bigint as metric_value, 'fail' as severity
+                from (
+                    select manga_id from gold.gold_manga_catalog group by manga_id having count(*) > 1
+                ) duplicate_manga
+                union all
+                select 'duplicate_gold_chapter_ids' as check_name, count(*)::bigint as metric_value, 'fail' as severity
+                from (
+                    select chapter_id from gold.gold_chapter_list group by chapter_id having count(*) > 1
+                ) duplicate_chapters
+                union all
+                select 'missing_cover_file_name' as check_name, count(*)::bigint as metric_value, 'warn' as severity
+                from gold.gold_manga_catalog where cover_file_name is null
+                union all
+                select 'chapters_without_manga' as check_name, count(*)::bigint as metric_value, 'warn' as severity
+                from gold.gold_chapter_list where manga_id is null
+            )
+            , results as (
+                select
+                    check_name,
+                    metric_value,
+                    case
+                        when check_name like '%not_empty' and metric_value = 0 then 'fail'
+                        when severity = 'fail' and check_name not like '%not_empty' and metric_value > 0 then 'fail'
+                        when severity = 'warn' and metric_value > 0 then 'warn'
+                        else 'pass'
+                    end as status,
+                    case
+                        when check_name like '%not_empty' then 'Expected at least one row.'
+                        when check_name like 'duplicate%' then 'Expected zero duplicate business keys.'
+                        when check_name = 'missing_cover_file_name' then 'Manga without cover image metadata.'
+                        when check_name = 'chapters_without_manga' then 'Chapters whose manga was not captured in the catalog batch.'
+                        else 'Data quality check.'
+                    end as description
+                from checks
+            )
+            select check_name, metric_value, status, description
+            from results
+            order by
+                case
+                    when status = 'fail' then 1
+                    when status = 'warn' then 2
+                    else 3
+                end,
+                check_name
+        """
+        with self.connection.cursor() as cursor:
+            cursor.execute(sql)
+            return cursor.fetchall()
+
+    def catalog_stats(self) -> dict[str, Any]:
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                """
+                select
+                    (select count(*) from gold.gold_manga_catalog)::bigint as manga_count,
+                    (select count(*) from gold.gold_chapter_list)::bigint as chapter_count,
+                    (select count(*) from gold.gold_latest_chapters)::bigint as latest_chapter_count,
+                    (select count(*) from gold.gold_manga_catalog where cover_file_name is null)::bigint as missing_cover_count,
+                    (select count(*) from gold.gold_chapter_list where manga_id is null)::bigint as chapters_without_manga_count
+                """
+            )
+            stats = cursor.fetchone()
+
+            cursor.execute(
+                """
+                select coalesce(original_language, 'unknown') as key, count(*)::bigint as value
+                from gold.gold_manga_catalog
+                group by coalesce(original_language, 'unknown')
+                order by value desc, key asc
+                """
+            )
+            stats["original_language_counts"] = {row["key"]: row["value"] for row in cursor.fetchall()}
+
+            cursor.execute(
+                """
+                select coalesce(status, 'unknown') as key, count(*)::bigint as value
+                from gold.gold_manga_catalog
+                group by coalesce(status, 'unknown')
+                order by value desc, key asc
+                """
+            )
+            stats["status_counts"] = {row["key"]: row["value"] for row in cursor.fetchall()}
+
+        return stats

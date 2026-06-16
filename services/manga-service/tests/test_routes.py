@@ -104,6 +104,71 @@ class FakeRepository:
             1,
         )
 
+    def admin_health(self):
+        return {"database": "web_manga"}
+
+    def pipeline_runs(self, limit: int):
+        return [
+            {
+                "crawl_run_id": "run-1",
+                "loaded_at": None,
+                "manga_rows": 10,
+                "chapter_rows": 20,
+                "cover_rows": 10,
+                "author_rows": 5,
+                "tag_rows": 30,
+                "scanlation_group_rows": 3,
+            }
+        ]
+
+    def gold_table_counts(self):
+        return [
+            {"table_name": "gold_manga_catalog", "row_count": 10},
+            {"table_name": "gold_chapter_list", "row_count": 20},
+        ]
+
+    def pipeline_summary(self):
+        return {
+            "latest_crawl_run_id": "run-1",
+            "latest_loaded_at": None,
+            "silver_manga_rows": 20,
+            "silver_distinct_manga": 10,
+            "silver_chapter_rows": 30,
+            "silver_distinct_chapters": 20,
+            "gold_manga_count": 10,
+            "gold_chapter_count": 20,
+            "gold_latest_chapter_count": 20,
+            "gold_table_counts": self.gold_table_counts(),
+            "latest_airflow_dag_state": "success",
+        }
+
+    def data_quality_checks(self):
+        return [
+            {
+                "check_name": "duplicate_gold_manga_ids",
+                "status": "pass",
+                "metric_value": 0,
+                "description": "Expected zero duplicate business keys.",
+            },
+            {
+                "check_name": "missing_cover_file_name",
+                "status": "warn",
+                "metric_value": 2,
+                "description": "Manga without cover image metadata.",
+            },
+        ]
+
+    def catalog_stats(self):
+        return {
+            "manga_count": 10,
+            "chapter_count": 20,
+            "latest_chapter_count": 20,
+            "missing_cover_count": 2,
+            "chapters_without_manga_count": 1,
+            "original_language_counts": {"ja": 8, "en": 2},
+            "status_counts": {"ongoing": 7, "completed": 3},
+        }
+
 
 class FakeAtHomeClient:
     def get_chapter_pages(self, source_chapter_id: str, quality: str):
@@ -206,3 +271,38 @@ def test_invalid_chapter_page_quality_returns_validation_error() -> None:
     response = client().get("/chapters/chapter-1/pages?quality=tiny")
 
     assert response.status_code == 422
+
+
+def test_admin_pipeline_summary_returns_counts() -> None:
+    response = client().get("/admin/pipeline/summary")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["latest_crawl_run_id"] == "run-1"
+    assert body["gold_manga_count"] == 10
+    assert body["latest_airflow_dag_state"] == "success"
+
+
+def test_admin_pipeline_runs_returns_recent_runs() -> None:
+    response = client().get("/admin/pipeline/runs?limit=5")
+
+    assert response.status_code == 200
+    assert response.json()[0]["crawl_run_id"] == "run-1"
+
+
+def test_admin_data_quality_returns_checks() -> None:
+    response = client().get("/admin/data-quality")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body[0]["check_name"] == "duplicate_gold_manga_ids"
+    assert body[1]["status"] == "warn"
+
+
+def test_admin_catalog_stats_returns_distribution_counts() -> None:
+    response = client().get("/admin/catalog/stats")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["manga_count"] == 10
+    assert body["original_language_counts"]["ja"] == 8

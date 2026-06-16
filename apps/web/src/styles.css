@@ -173,6 +173,165 @@ h1 {
   opacity: 0.7;
 }
 
+.admin-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-links a,
+.text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  border: 1px solid #d8dee4;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0 12px;
+  color: #1f2933;
+  font-weight: 700;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.metric-card,
+.admin-panel {
+  background: #fff;
+  border: 1px solid #e1e6ea;
+  border-radius: 8px;
+}
+
+.metric-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+
+.metric-card span {
+  color: #607080;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.metric-card strong {
+  font-size: 28px;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.admin-panel {
+  padding: 16px;
+}
+
+.admin-panel h2 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.quality-list,
+.stats-list {
+  display: grid;
+  gap: 10px;
+}
+
+.quality-row {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr) 64px;
+  gap: 12px;
+  align-items: center;
+  border-top: 1px solid #eef2f3;
+  padding-top: 10px;
+}
+
+.quality-row p,
+.stats-list p {
+  margin: 2px 0 0;
+  color: #607080;
+  font-size: 13px;
+}
+
+.status-pill {
+  border-radius: 999px;
+  padding: 5px 8px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.status-pass {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-warn {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-fail {
+  background: #ffe4e6;
+  color: #9f1239;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.admin-table th,
+.admin-table td {
+  border-top: 1px solid #eef2f3;
+  padding: 10px 8px;
+  text-align: left;
+  font-size: 13px;
+}
+
+.admin-table th {
+  color: #607080;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.gold-count-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.gold-count {
+  border: 1px solid #eef2f3;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.gold-count span {
+  display: block;
+  color: #607080;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.gold-count strong {
+  font-size: 22px;
+}
+
 .manga-card,
 .latest-row,
 .chapter-row {
@@ -384,6 +543,14 @@ h1 {
   }
 
   .chapter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quality-row {
     grid-template-columns: 1fr;
   }
 }
