@@ -1,10 +1,14 @@
 import type {
   ChapterListItem,
   ChapterPagesResponse,
+  CatalogStatsResponse,
+  DataQualityCheckItem,
   LatestChapterItem,
   MangaCatalogItem,
   MangaDetail,
   PaginatedResponse,
+  PipelineRunItem,
+  PipelineSummaryResponse,
 } from "./types";
 
 const API_BASE_URL = import.meta.env.VITE_MANGA_API_URL ?? "http://localhost:8000";
@@ -66,4 +70,20 @@ export function getChapterPages(
   return getJson<ChapterPagesResponse>(
     `/chapters/${encodeURIComponent(sourceChapterId)}/pages${query({ quality })}`,
   );
+}
+
+export function getPipelineSummary() {
+  return getJson<PipelineSummaryResponse>("/admin/pipeline/summary");
+}
+
+export function listPipelineRuns(limit = 10) {
+  return getJson<PipelineRunItem[]>(`/admin/pipeline/runs${query({ limit })}`);
+}
+
+export function getDataQualityChecks() {
+  return getJson<DataQualityCheckItem[]>("/admin/data-quality");
+}
+
+export function getCatalogStats() {
+  return getJson<CatalogStatsResponse>("/admin/catalog/stats");
 }

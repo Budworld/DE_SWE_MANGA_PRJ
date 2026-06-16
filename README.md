@@ -8,6 +8,40 @@ Monorepo skeleton for a manga web platform that combines SWE, DE, and AI work:
 
 Current source is **MangaDex only**. Other sources can be added later through source adapters, but Milestone 1 focuses on building a clean data foundation first.
 
+## Milestone 5: Data Observability & Admin Dashboard
+
+Milestone 5 adds a local read-only admin dashboard for pipeline monitoring:
+
+```text
+Airflow + dbt + PostgreSQL
+  -> monitoring views
+  -> manga-service admin API
+  -> /admin web dashboard
+```
+
+It shows pipeline runs, Gold table counts, Silver vs Gold counts, and data quality warnings such as missing covers or chapters without matched manga.
+
+Run:
+
+```powershell
+docker compose up -d postgres airflow-webserver airflow-scheduler manga-service
+dbt build --project-dir services/dbt --profiles-dir services/dbt
+cd apps/web
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:5173/admin
+```
+
+Detailed docs:
+
+```text
+docs/architecture/milestone-5-data-observability.md
+```
+
 ## Milestone 4: Airflow Orchestration
 
 Milestone 4 adds Airflow to run the existing DE pipeline end to end:

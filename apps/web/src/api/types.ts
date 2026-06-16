@@ -78,3 +78,50 @@ export interface ChapterPagesResponse {
   hash: string;
   pages: ChapterPageItem[];
 }
+
+export interface PipelineRunItem {
+  crawl_run_id: string;
+  loaded_at: string | null;
+  manga_rows: number;
+  chapter_rows: number;
+  cover_rows: number;
+  author_rows: number;
+  tag_rows: number;
+  scanlation_group_rows: number;
+}
+
+export interface GoldTableCountItem {
+  table_name: string;
+  row_count: number;
+}
+
+export interface DataQualityCheckItem {
+  check_name: string;
+  status: "pass" | "warn" | "fail";
+  metric_value: number;
+  description: string;
+}
+
+export interface CatalogStatsResponse {
+  manga_count: number;
+  chapter_count: number;
+  latest_chapter_count: number;
+  missing_cover_count: number;
+  chapters_without_manga_count: number;
+  original_language_counts: Record<string, number>;
+  status_counts: Record<string, number>;
+}
+
+export interface PipelineSummaryResponse {
+  latest_crawl_run_id: string | null;
+  latest_loaded_at: string | null;
+  silver_manga_rows: number;
+  silver_distinct_manga: number;
+  silver_chapter_rows: number;
+  silver_distinct_chapters: number;
+  gold_manga_count: number;
+  gold_chapter_count: number;
+  gold_latest_chapter_count: number;
+  gold_table_counts: GoldTableCountItem[];
+  latest_airflow_dag_state: string | null;
+}

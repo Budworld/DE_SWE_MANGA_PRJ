@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: pipeline_run_summary
+    columns:
+      - name: crawl_run_id
+        tests:
+          - not_null
+          - unique
+
+  - name: gold_table_counts
+    columns:
+      - name: table_name
+        tests:
+          - not_null
+          - unique
+      - name: row_count
+        tests:
+          - not_null
+
+  - name: data_quality_checks
+    columns:
+      - name: check_name
+        tests:
+          - not_null
+          - unique
+      - name: status
+        tests:
+          - not_null

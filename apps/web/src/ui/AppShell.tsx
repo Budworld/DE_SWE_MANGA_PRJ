@@ -1,4 +1,4 @@
-import { BookOpen, Clock3, Library } from "lucide-react";
+import { Activity, BookOpen, Clock3, Library } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 
 export function AppShell() {
@@ -17,6 +17,10 @@ export function AppShell() {
           <NavLink to="/latest">
             <Clock3 size={18} />
             Latest
+          </NavLink>
+          <NavLink to="/admin">
+            <Activity size={18} />
+            Admin
           </NavLink>
         </nav>
       </aside>

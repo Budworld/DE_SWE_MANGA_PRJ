@@ -110,3 +110,56 @@ class ChapterPagesResponse(BaseModel):
     base_url: str
     hash: str
     pages: list[ChapterPageItem]
+
+
+class AdminHealthResponse(BaseModel):
+    status: str
+    service: str
+    database: str
+
+
+class PipelineRunItem(BaseModel):
+    crawl_run_id: str
+    loaded_at: datetime | None = None
+    manga_rows: int = 0
+    chapter_rows: int = 0
+    cover_rows: int = 0
+    author_rows: int = 0
+    tag_rows: int = 0
+    scanlation_group_rows: int = 0
+
+
+class GoldTableCountItem(BaseModel):
+    table_name: str
+    row_count: int
+
+
+class DataQualityCheckItem(BaseModel):
+    check_name: str
+    status: Literal["pass", "warn", "fail"]
+    metric_value: int
+    description: str
+
+
+class CatalogStatsResponse(BaseModel):
+    manga_count: int
+    chapter_count: int
+    latest_chapter_count: int
+    missing_cover_count: int
+    chapters_without_manga_count: int
+    original_language_counts: dict[str, int] = Field(default_factory=dict)
+    status_counts: dict[str, int] = Field(default_factory=dict)
+
+
+class PipelineSummaryResponse(BaseModel):
+    latest_crawl_run_id: str | None = None
+    latest_loaded_at: datetime | None = None
+    silver_manga_rows: int
+    silver_distinct_manga: int
+    silver_chapter_rows: int
+    silver_distinct_chapters: int
+    gold_manga_count: int
+    gold_chapter_count: int
+    gold_latest_chapter_count: int
+    gold_table_counts: list[GoldTableCountItem] = Field(default_factory=list)
+    latest_airflow_dag_state: str | None = None

@@ -12,6 +12,50 @@ paths:
       responses:
         "200":
           description: Service status
+  /admin/health:
+    get:
+      summary: Admin observability health check
+      responses:
+        "200":
+          description: Service and database status
+  /admin/pipeline/runs:
+    get:
+      summary: List recent crawl/load runs
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Recent pipeline runs with Silver row counts
+  /admin/pipeline/summary:
+    get:
+      summary: Get pipeline count summary
+      responses:
+        "200":
+          description: Silver, Gold, and latest Airflow state summary
+  /admin/data-quality:
+    get:
+      summary: Get data quality checks
+      responses:
+        "200":
+          description: Data quality check results with pass, warn, or fail status
+  /admin/catalog/stats:
+    get:
+      summary: Get catalog distribution stats
+      responses:
+        "200":
+          description: Catalog counts by language and status
+  /admin/gold-table-counts:
+    get:
+      summary: Get Gold table row counts
+      responses:
+        "200":
+          description: Row counts for Gold tables
   /manga:
     get:
       summary: List manga from gold catalog

@@ -16,3 +16,4 @@ sources:
       - name: manga_cover
       - name: chapter_manga
       - name: chapter_scanlation_group
+      - name: _load_audit
