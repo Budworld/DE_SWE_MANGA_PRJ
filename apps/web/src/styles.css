@@ -32,6 +32,8 @@ select {
 .sidebar {
   background: #171c22;
   color: #f8fafc;
+  display: flex;
+  flex-direction: column;
   padding: 24px;
 }
 
@@ -62,6 +64,53 @@ select {
 .nav a:hover {
   background: #26313d;
   color: #fff;
+}
+
+.auth-menu {
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.auth-menu span {
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 0 12px;
+}
+
+.auth-menu a,
+.auth-menu button,
+.primary-button {
+  align-items: center;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 800;
+  gap: 8px;
+  justify-content: center;
+}
+
+.auth-menu a,
+.auth-menu button {
+  background: #26313d;
+  color: #f8fafc;
+  min-height: 40px;
+  padding: 0 12px;
+}
+
+.primary-button {
+  background: #1f2933;
+  color: #fff;
+  min-height: 42px;
+  padding: 0 16px;
+}
+
+.primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .main {
@@ -330,6 +379,49 @@ h1 {
 
 .gold-count strong {
   font-size: 22px;
+}
+
+.login-page {
+  align-items: center;
+  display: flex;
+  min-height: calc(100vh - 64px);
+}
+
+.login-panel {
+  background: #fff;
+  border: 1px solid #e1e6ea;
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  max-width: 420px;
+  padding: 22px;
+  width: 100%;
+}
+
+.login-panel h1 {
+  font-size: 24px;
+}
+
+.login-panel label {
+  color: #607080;
+  display: grid;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 6px;
+}
+
+.login-panel input {
+  border: 1px solid #d8dee4;
+  border-radius: 8px;
+  color: #1f2933;
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.form-error {
+  color: #9f1239;
+  font-weight: 700;
+  margin: 0;
 }
 
 .manga-card,

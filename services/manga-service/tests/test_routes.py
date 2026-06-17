@@ -202,6 +202,20 @@ def client() -> TestClient:
     return TestClient(app)
 
 
+def admin_headers(test_client: TestClient) -> dict[str, str]:
+    response = test_client.post("/auth/login", json={"username": "admin", "password": "admin"})
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+def user_headers(test_client: TestClient) -> dict[str, str]:
+    response = test_client.post("/auth/login", json={"username": "reader", "password": "reader"})
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
 def teardown_function() -> None:
     app.dependency_overrides.clear()
 
@@ -273,8 +287,52 @@ def test_invalid_chapter_page_quality_returns_validation_error() -> None:
     assert response.status_code == 422
 
 
-def test_admin_pipeline_summary_returns_counts() -> None:
+def test_login_returns_admin_token() -> None:
+    response = client().post("/auth/login", json={"username": "admin", "password": "admin"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["token_type"] == "bearer"
+    assert body["access_token"]
+    assert body["user"] == {"username": "admin", "role": "admin"}
+
+
+def test_login_rejects_invalid_credentials() -> None:
+    response = client().post("/auth/login", json={"username": "admin", "password": "bad"})
+
+    assert response.status_code == 401
+
+
+def test_me_returns_current_user() -> None:
+    test_client = client()
+    response = test_client.get("/auth/me", headers=admin_headers(test_client))
+
+    assert response.status_code == 200
+    assert response.json() == {"username": "admin", "role": "admin"}
+
+
+def test_me_requires_token() -> None:
+    response = client().get("/auth/me")
+
+    assert response.status_code == 401
+
+
+def test_admin_pipeline_summary_requires_token() -> None:
     response = client().get("/admin/pipeline/summary")
+
+    assert response.status_code == 401
+
+
+def test_admin_pipeline_summary_rejects_user_role() -> None:
+    test_client = client()
+    response = test_client.get("/admin/pipeline/summary", headers=user_headers(test_client))
+
+    assert response.status_code == 403
+
+
+def test_admin_pipeline_summary_returns_counts() -> None:
+    test_client = client()
+    response = test_client.get("/admin/pipeline/summary", headers=admin_headers(test_client))
 
     assert response.status_code == 200
     body = response.json()
@@ -284,14 +342,16 @@ def test_admin_pipeline_summary_returns_counts() -> None:
 
 
 def test_admin_pipeline_runs_returns_recent_runs() -> None:
-    response = client().get("/admin/pipeline/runs?limit=5")
+    test_client = client()
+    response = test_client.get("/admin/pipeline/runs?limit=5", headers=admin_headers(test_client))
 
     assert response.status_code == 200
     assert response.json()[0]["crawl_run_id"] == "run-1"
 
 
 def test_admin_data_quality_returns_checks() -> None:
-    response = client().get("/admin/data-quality")
+    test_client = client()
+    response = test_client.get("/admin/data-quality", headers=admin_headers(test_client))
 
     assert response.status_code == 200
     body = response.json()
@@ -300,7 +360,8 @@ def test_admin_data_quality_returns_checks() -> None:
 
 
 def test_admin_catalog_stats_returns_distribution_counts() -> None:
-    response = client().get("/admin/catalog/stats")
+    test_client = client()
+    response = test_client.get("/admin/catalog/stats", headers=admin_headers(test_client))
 
     assert response.status_code == 200
     body = response.json()

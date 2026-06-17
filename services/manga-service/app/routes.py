@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from psycopg import Connection
 
+from app.auth import AuthenticatedUser, authenticate_demo_user, create_access_token, get_current_user, require_admin
 from app.config import get_settings
 from app.db import get_connection
 from app.mangadex_client import MangaDexAtHomeClient
@@ -16,8 +19,11 @@ from app.schemas import (
     ChapterPagesResponse,
     DataQualityCheckItem,
     GoldTableCountItem,
+    AuthUser,
     HealthResponse,
     LatestChapterItem,
+    LoginRequest,
+    LoginResponse,
     MangaCatalogItem,
     MangaDetail,
     PaginatedResponse,
@@ -42,8 +48,29 @@ def health() -> HealthResponse:
     return HealthResponse(status="ok", service=get_settings().app_name)
 
 
+@router.post("/auth/login", response_model=LoginResponse)
+def login(payload: LoginRequest) -> LoginResponse:
+    user = authenticate_demo_user(payload.username, payload.password)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    access_token, expires_at = create_access_token(user)
+    return LoginResponse(
+        access_token=access_token,
+        expires_at=datetime.fromtimestamp(expires_at, tz=UTC),
+        user=AuthUser(username=user.username, role=user.role),
+    )
+
+
+@router.get("/auth/me", response_model=AuthUser)
+def get_me(current_user: Annotated[AuthenticatedUser, Depends(get_current_user)]) -> AuthUser:
+    return AuthUser(username=current_user.username, role=current_user.role)
+
+
 @router.get("/admin/health", response_model=AdminHealthResponse)
-def admin_health(repository: Annotated[MangaRepository, Depends(get_repository)]) -> AdminHealthResponse:
+def admin_health(
+    repository: Annotated[MangaRepository, Depends(get_repository)],
+    _: Annotated[AuthenticatedUser, Depends(require_admin)],
+) -> AdminHealthResponse:
     row = repository.admin_health()
     return AdminHealthResponse(status="ok", service=get_settings().app_name, database=row["database"])
 
@@ -51,28 +78,41 @@ def admin_health(repository: Annotated[MangaRepository, Depends(get_repository)]
 @router.get("/admin/pipeline/runs", response_model=list[PipelineRunItem])
 def list_pipeline_runs(
     repository: Annotated[MangaRepository, Depends(get_repository)],
+    _: Annotated[AuthenticatedUser, Depends(require_admin)],
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> list[PipelineRunItem]:
     return [PipelineRunItem.model_validate(row) for row in repository.pipeline_runs(limit)]
 
 
 @router.get("/admin/pipeline/summary", response_model=PipelineSummaryResponse)
-def get_pipeline_summary(repository: Annotated[MangaRepository, Depends(get_repository)]) -> PipelineSummaryResponse:
+def get_pipeline_summary(
+    repository: Annotated[MangaRepository, Depends(get_repository)],
+    _: Annotated[AuthenticatedUser, Depends(require_admin)],
+) -> PipelineSummaryResponse:
     return PipelineSummaryResponse.model_validate(repository.pipeline_summary())
 
 
 @router.get("/admin/data-quality", response_model=list[DataQualityCheckItem])
-def get_data_quality(repository: Annotated[MangaRepository, Depends(get_repository)]) -> list[DataQualityCheckItem]:
+def get_data_quality(
+    repository: Annotated[MangaRepository, Depends(get_repository)],
+    _: Annotated[AuthenticatedUser, Depends(require_admin)],
+) -> list[DataQualityCheckItem]:
     return [DataQualityCheckItem.model_validate(row) for row in repository.data_quality_checks()]
 
 
 @router.get("/admin/catalog/stats", response_model=CatalogStatsResponse)
-def get_catalog_stats(repository: Annotated[MangaRepository, Depends(get_repository)]) -> CatalogStatsResponse:
+def get_catalog_stats(
+    repository: Annotated[MangaRepository, Depends(get_repository)],
+    _: Annotated[AuthenticatedUser, Depends(require_admin)],
+) -> CatalogStatsResponse:
     return CatalogStatsResponse.model_validate(repository.catalog_stats())
 
 
 @router.get("/admin/gold-table-counts", response_model=list[GoldTableCountItem])
-def get_gold_table_counts(repository: Annotated[MangaRepository, Depends(get_repository)]) -> list[GoldTableCountItem]:
+def get_gold_table_counts(
+    repository: Annotated[MangaRepository, Depends(get_repository)],
+    _: Annotated[AuthenticatedUser, Depends(require_admin)],
+) -> list[GoldTableCountItem]:
     return [GoldTableCountItem.model_validate(row) for row in repository.gold_table_counts()]
 
 

@@ -21,6 +21,23 @@ class HealthResponse(BaseModel):
     service: str
 
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class AuthUser(BaseModel):
+    username: str
+    role: Literal["admin", "user"]
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_at: datetime
+    user: AuthUser
+
+
 class MangaCatalogItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
