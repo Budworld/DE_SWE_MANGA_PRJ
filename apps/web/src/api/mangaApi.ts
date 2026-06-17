@@ -3,7 +3,9 @@ import type {
   ChapterPagesResponse,
   CatalogStatsResponse,
   DataQualityCheckItem,
+  AuthUser,
   LatestChapterItem,
+  LoginResponse,
   MangaCatalogItem,
   MangaDetail,
   PaginatedResponse,
@@ -13,12 +15,31 @@ import type {
 
 const API_BASE_URL = import.meta.env.VITE_MANGA_API_URL ?? "http://localhost:8000";
 
-async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`);
+function getStoredToken(): string | null {
+  return localStorage.getItem("web_manga_auth_token");
+}
+
+function authHeaders(): HeadersInit {
+  const token = getStoredToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      ...authHeaders(),
+      ...init.headers,
+    },
+  });
   if (!response.ok) {
     throw new Error(`API request failed: ${response.status}`);
   }
   return response.json() as Promise<T>;
+}
+
+async function getJson<T>(path: string): Promise<T> {
+  return requestJson<T>(path);
 }
 
 function query(params: Record<string, string | number | undefined | null>): string {
@@ -70,6 +91,18 @@ export function getChapterPages(
   return getJson<ChapterPagesResponse>(
     `/chapters/${encodeURIComponent(sourceChapterId)}/pages${query({ quality })}`,
   );
+}
+
+export function login(username: string, password: string) {
+  return requestJson<LoginResponse>("/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+}
+
+export function getCurrentUser() {
+  return getJson<AuthUser>("/auth/me");
 }
 
 export function getPipelineSummary() {

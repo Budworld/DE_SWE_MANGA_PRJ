@@ -79,6 +79,18 @@ export interface ChapterPagesResponse {
   pages: ChapterPageItem[];
 }
 
+export interface AuthUser {
+  username: string;
+  role: "admin" | "user";
+}
+
+export interface LoginResponse {
+  access_token: string;
+  token_type: "bearer";
+  expires_at: string;
+  user: AuthUser;
+}
+
 export interface PipelineRunItem {
   crawl_run_id: string;
   loaded_at: string | null;

@@ -5,6 +5,11 @@ info:
   description: API served by manga-service from PostgreSQL gold tables.
 servers:
   - url: http://localhost:8000
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
 paths:
   /health:
     get:
@@ -12,15 +17,55 @@ paths:
       responses:
         "200":
           description: Service status
+  /auth/login:
+    post:
+      summary: Login with local demo credentials
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Bearer token and user role
+        "401":
+          description: Invalid credentials
+  /auth/me:
+    get:
+      summary: Get current authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+        "401":
+          description: Missing or invalid token
   /admin/health:
     get:
       summary: Admin observability health check
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Service and database status
+        "401":
+          description: Missing or invalid token
+        "403":
+          description: Admin role required
   /admin/pipeline/runs:
     get:
       summary: List recent crawl/load runs
+      security:
+        - bearerAuth: []
       parameters:
         - name: limit
           in: query
@@ -32,30 +77,58 @@ paths:
       responses:
         "200":
           description: Recent pipeline runs with Silver row counts
+        "401":
+          description: Missing or invalid token
+        "403":
+          description: Admin role required
   /admin/pipeline/summary:
     get:
       summary: Get pipeline count summary
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Silver, Gold, and latest Airflow state summary
+        "401":
+          description: Missing or invalid token
+        "403":
+          description: Admin role required
   /admin/data-quality:
     get:
       summary: Get data quality checks
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Data quality check results with pass, warn, or fail status
+        "401":
+          description: Missing or invalid token
+        "403":
+          description: Admin role required
   /admin/catalog/stats:
     get:
       summary: Get catalog distribution stats
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Catalog counts by language and status
+        "401":
+          description: Missing or invalid token
+        "403":
+          description: Admin role required
   /admin/gold-table-counts:
     get:
       summary: Get Gold table row counts
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Row counts for Gold tables
+        "401":
+          description: Missing or invalid token
+        "403":
+          description: Admin role required
   /manga:
     get:
       summary: List manga from gold catalog

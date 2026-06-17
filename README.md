@@ -8,6 +8,44 @@ Monorepo skeleton for a manga web platform that combines SWE, DE, and AI work:
 
 Current source is **MangaDex only**. Other sources can be added later through source adapters, but Milestone 1 focuses on building a clean data foundation first.
 
+## Milestone 6: Local Auth & Admin Access Control
+
+Milestone 6 adds local demo authentication around the admin dashboard:
+
+```text
+Env demo users
+  -> manga-service signed bearer token
+  -> protected /admin API
+  -> /login + protected /admin web route
+```
+
+Default local accounts:
+
+```text
+admin / admin   role: admin
+reader / reader role: user
+```
+
+Run:
+
+```powershell
+docker compose up -d postgres airflow-webserver airflow-scheduler manga-service
+cd apps/web
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:5173/login
+```
+
+Detailed docs:
+
+```text
+docs/architecture/milestone-6-auth-admin-access.md
+```
+
 ## Milestone 5: Data Observability & Admin Dashboard
 
 Milestone 5 adds a local read-only admin dashboard for pipeline monitoring:
