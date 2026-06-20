@@ -17,6 +17,7 @@ from airflow.operators.python import get_current_context
 
 PROJECT_ROOT = Path(os.getenv("WEB_MANGA_PROJECT_ROOT", "/opt/airflow/project"))
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://web_manga:web_manga@postgres:5432/web_manga")
+DBT_TARGET = os.getenv("DBT_TARGET", "dev")
 SOURCE = "mangadex"
 GOLD_TABLES = (
     "gold_manga_catalog",
@@ -67,6 +68,19 @@ def executable(name: str) -> str:
     return path
 
 
+def data_target_env() -> dict[str, str]:
+    return {
+        "DATABASE_URL": DATABASE_URL,
+        "DBT_TARGET": DBT_TARGET,
+        "POSTGRES_HOST": os.getenv("POSTGRES_HOST", "postgres"),
+        "POSTGRES_PORT": os.getenv("POSTGRES_PORT", "5432"),
+        "POSTGRES_DB": os.getenv("POSTGRES_DB", "web_manga"),
+        "POSTGRES_USER": os.getenv("POSTGRES_USER", "web_manga"),
+        "POSTGRES_PASSWORD": os.getenv("POSTGRES_PASSWORD", "web_manga"),
+        "POSTGRES_SSLMODE": os.getenv("POSTGRES_SSLMODE", "prefer"),
+    }
+
+
 @dag(
     dag_id="mangadex_data_pipeline",
     description="Orchestrate MangaDex Raw -> Bronze -> Silver -> PostgreSQL -> dbt Gold.",
@@ -83,6 +97,12 @@ def executable(name: str) -> str:
     },
 )
 def mangadex_data_pipeline() -> None:
+    @task
+    def log_data_target() -> str:
+        target_mode = "supabase" if DBT_TARGET == "supabase" else "local"
+        logging.info("Running data pipeline with target_mode=%s dbt_target=%s", target_mode, DBT_TARGET)
+        return target_mode
+
     @task
     def crawl_mangadex_raw() -> str:
         stdout = run_project_command(
@@ -156,7 +176,7 @@ def mangadex_data_pipeline() -> None:
                 "silver",
                 "--overwrite",
             ],
-            env={"DATABASE_URL": DATABASE_URL},
+            env=data_target_env(),
         )
         return crawl_run_id
 
@@ -171,7 +191,7 @@ def mangadex_data_pipeline() -> None:
                 "--profiles-dir",
                 "services/dbt",
             ],
-            env={"DATABASE_URL": DATABASE_URL},
+            env=data_target_env(),
         )
         return crawl_run_id
 
@@ -191,13 +211,15 @@ def mangadex_data_pipeline() -> None:
         logging.info("Gold validation counts for %s: %s", crawl_run_id, counts)
         return counts
 
+    target = log_data_target()
+    crawl = crawl_mangadex_raw()
+    target >> crawl
+
     validate_gold_tables(
         dbt_build(
             load_silver_to_postgres(
                 bronze_to_silver(
-                    raw_to_bronze(
-                        crawl_mangadex_raw()
-                    )
+                    raw_to_bronze(crawl)
                 )
             )
         )

@@ -8,6 +8,44 @@ Monorepo skeleton for a manga web platform that combines SWE, DE, and AI work:
 
 Current source is **MangaDex only**. Other sources can be added later through source adapters, but Milestone 1 focuses on building a clean data foundation first.
 
+## Milestone 7: Airflow ETL to Supabase
+
+Milestone 7 keeps Airflow as the one-click ETL runner while moving manga warehouse data to Supabase Postgres:
+
+```text
+Airflow DAG
+  -> Raw/Bronze/Silver local files
+  -> Supabase silver
+  -> dbt staging/gold/monitoring on Supabase
+  -> manga-service and web read Supabase-backed Gold
+```
+
+Create a local Supabase env file:
+
+```powershell
+Copy-Item .env.supabase.example .env.supabase
+```
+
+Replace the password placeholder, then run:
+
+```powershell
+docker compose --env-file .env.supabase up airflow-init
+docker compose --env-file .env.supabase up -d postgres airflow-webserver airflow-scheduler manga-service
+```
+
+Open Airflow and trigger:
+
+```text
+http://localhost:8080
+mangadex_data_pipeline
+```
+
+Detailed docs:
+
+```text
+docs/architecture/milestone-7-airflow-supabase-etl.md
+```
+
 ## Milestone 6: Local Auth & Admin Access Control
 
 Milestone 6 adds local demo authentication around the admin dashboard:

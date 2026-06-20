@@ -32,3 +32,27 @@ database: web_manga
 user: web_manga
 password: web_manga
 ```
+
+## Supabase Target
+
+Milestone 7 adds a Supabase target for Airflow-driven ETL.
+
+Create `.env.supabase` from the template and set the real password:
+
+```powershell
+Copy-Item .env.supabase.example .env.supabase
+```
+
+For local dbt debugging, load the same values into your shell and run:
+
+```powershell
+$env:DBT_TARGET="supabase"
+dbt debug --project-dir services/dbt --profiles-dir services/dbt
+dbt build --project-dir services/dbt --profiles-dir services/dbt
+```
+
+Airflow passes these env vars automatically when started with:
+
+```powershell
+docker compose --env-file .env.supabase up -d airflow-webserver airflow-scheduler
+```

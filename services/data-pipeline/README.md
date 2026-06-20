@@ -76,3 +76,22 @@ The default database URL is:
 ```text
 postgresql://web_manga:web_manga@localhost:5432/web_manga
 ```
+
+## Airflow to Supabase
+
+Milestone 7 makes Airflow the normal way to run the complete ETL into Supabase.
+
+Create `.env.supabase` from `.env.supabase.example`, replace the password, then start Airflow:
+
+```powershell
+docker compose --env-file .env.supabase up airflow-init
+docker compose --env-file .env.supabase up -d postgres airflow-webserver airflow-scheduler manga-service
+```
+
+Trigger `mangadex_data_pipeline` in Airflow. The DAG runs:
+
+```text
+crawl raw -> bronze -> silver -> load silver to Supabase -> dbt build -> validate gold
+```
+
+Manual script commands remain useful for debugging, but they are not required for the normal Supabase workflow.

@@ -7,14 +7,17 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
     AIRFLOW__WEBSERVER__SECRET_KEY: web_manga_local_airflow_secret
     WEB_MANGA_PROJECT_ROOT: /opt/airflow/project
-    DATABASE_URL: postgresql://web_manga:web_manga@postgres:5432/web_manga
-    POSTGRES_HOST: postgres
-    POSTGRES_PORT: "5432"
-    POSTGRES_DB: web_manga
-    POSTGRES_USER: web_manga
-    POSTGRES_PASSWORD: web_manga
+    DATABASE_URL: ${DATABASE_URL:-postgresql://web_manga:web_manga@postgres:5432/web_manga}
+    POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+    POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+    POSTGRES_DB: ${POSTGRES_DB:-web_manga}
+    POSTGRES_USER: ${POSTGRES_USER:-web_manga}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-web_manga}
+    POSTGRES_SSLMODE: ${POSTGRES_SSLMODE:-prefer}
+    DBT_TARGET: ${DBT_TARGET:-dev}
   volumes:
     - .:/opt/airflow/project
+    - ./services/airflow/dags:/opt/airflow/dags
     - airflow_logs:/opt/airflow/logs
   depends_on:
     - postgres
@@ -46,11 +49,15 @@ services:
   manga-service:
     build: ./services/manga-service
     environment:
-      DATABASE_URL: postgresql://web_manga:web_manga@postgres:5432/web_manga
+      DATABASE_URL: ${DATABASE_URL:-postgresql://web_manga:web_manga@postgres:5432/web_manga}
+      AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:-local-dev-auth-secret}
+      AUTH_TOKEN_TTL_SECONDS: ${AUTH_TOKEN_TTL_SECONDS:-28800}
+      AUTH_DEMO_ADMIN_USERNAME: ${AUTH_DEMO_ADMIN_USERNAME:-admin}
+      AUTH_DEMO_ADMIN_PASSWORD: ${AUTH_DEMO_ADMIN_PASSWORD:-admin}
+      AUTH_DEMO_USER_USERNAME: ${AUTH_DEMO_USER_USERNAME:-reader}
+      AUTH_DEMO_USER_PASSWORD: ${AUTH_DEMO_USER_PASSWORD:-reader}
     ports:
       - "8000:8000"
-    depends_on:
-      - postgres
 
   airflow-init:
     <<: *airflow-common

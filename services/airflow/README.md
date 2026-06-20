@@ -35,11 +35,13 @@ The DAG file is copied into the Airflow image from:
 services/airflow/dags/mangadex_pipeline.py
 ```
 
-After changing DAG code, rebuild the Airflow services:
+For local development, Docker Compose also mounts that folder into:
 
-```powershell
-docker compose up -d --build airflow-webserver airflow-scheduler
+```text
+/opt/airflow/dags
 ```
+
+After changing DAG code, restart the Airflow services if the UI does not refresh the DAG quickly.
 
 ## Run
 
@@ -73,6 +75,32 @@ Trigger the DAG manually:
 ```text
 mangadex_data_pipeline
 ```
+
+## Supabase Data Target
+
+Milestone 7 can run the same DAG into Supabase Postgres while keeping Airflow metadata local.
+
+Create a local env file:
+
+```powershell
+Copy-Item .env.supabase.example .env.supabase
+```
+
+Replace the password placeholder, then start Airflow with the env file:
+
+```powershell
+docker compose --env-file .env.supabase up airflow-init
+docker compose --env-file .env.supabase up -d postgres airflow-webserver airflow-scheduler manga-service
+```
+
+In this mode:
+
+```text
+local postgres  -> Airflow metadata
+Supabase        -> silver, staging, gold, monitoring
+```
+
+The normal workflow is still one manual Airflow trigger. You do not need to run the Raw/Bronze/Silver/load/dbt commands manually.
 
 ## DAG Params
 
