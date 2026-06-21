@@ -122,7 +122,14 @@ def write_raw_error(
     return target_file
 
 
-def write_crawl_run(output_root: Path, crawl_run_id: str, status: str, started_at: str, ended_at: str) -> Path:
+def write_crawl_run(
+    output_root: Path,
+    crawl_run_id: str,
+    status: str,
+    started_at: str,
+    ended_at: str,
+    summary: dict[str, Any] | None = None,
+) -> Path:
     target_dir = output_root / SOURCE / f"crawl_run_id={crawl_run_id}"
     target_dir.mkdir(parents=True, exist_ok=True)
     target_file = target_dir / "crawl_run.json"
@@ -134,6 +141,8 @@ def write_crawl_run(output_root: Path, crawl_run_id: str, status: str, started_a
         "ended_at": ended_at,
         "schema_version": RAW_SCHEMA_VERSION,
     }
+    if summary is not None:
+        document["summary"] = summary
     target_file.write_text(json.dumps(document, ensure_ascii=False, indent=2), encoding="utf-8")
     return target_file
 
@@ -194,6 +203,119 @@ def crawl_collection(
     return written_files
 
 
+def payload_items(raw_file: Path) -> list[dict[str, Any]]:
+    raw_document = json.loads(raw_file.read_text(encoding="utf-8"))
+    payload = raw_document.get("payload") or {}
+    data = payload.get("data") or []
+    return [item for item in data if isinstance(item, dict)]
+
+
+def relationship_ids(item: dict[str, Any], relationship_type: str) -> set[str]:
+    ids: set[str] = set()
+    for relationship in item.get("relationships") or []:
+        if not isinstance(relationship, dict):
+            continue
+        if relationship.get("type") == relationship_type and relationship.get("id"):
+            ids.add(relationship["id"])
+    return ids
+
+
+def entity_ids_from_raw_files(raw_run_dir: Path, entity_type: str) -> set[str]:
+    entity_dir = raw_run_dir / entity_type
+    if not entity_dir.exists():
+        return set()
+
+    ids: set[str] = set()
+    for raw_file in sorted(entity_dir.glob("*.json")):
+        for item in payload_items(raw_file):
+            if item.get("id"):
+                ids.add(item["id"])
+    return ids
+
+
+def chapter_referenced_manga_ids(raw_run_dir: Path) -> set[str]:
+    chapter_dir = raw_run_dir / "chapter"
+    if not chapter_dir.exists():
+        return set()
+
+    ids: set[str] = set()
+    for raw_file in sorted(chapter_dir.glob("*.json")):
+        for item in payload_items(raw_file):
+            ids.update(relationship_ids(item, "manga"))
+    return ids
+
+
+def chunks(values: list[str], batch_size: int) -> list[list[str]]:
+    return [values[index : index + batch_size] for index in range(0, len(values), batch_size)]
+
+
+def backfill_missing_manga(
+    output_root: Path,
+    crawl_run_id: str,
+    timeout_seconds: int,
+    pause_seconds: float,
+    batch_size: int,
+) -> tuple[list[Path], dict[str, int]]:
+    raw_run_dir = output_root / SOURCE / f"crawl_run_id={crawl_run_id}"
+    existing_manga_ids = entity_ids_from_raw_files(raw_run_dir, "manga")
+    referenced_manga_ids = chapter_referenced_manga_ids(raw_run_dir)
+    missing_manga_ids = sorted(referenced_manga_ids - existing_manga_ids)
+
+    stats = {
+        "chapter_referenced_manga_count": len(referenced_manga_ids),
+        "catalog_manga_count": len(existing_manga_ids),
+        "missing_manga_detected_count": len(missing_manga_ids),
+        "missing_manga_backfilled_count": 0,
+        "missing_manga_backfill_failed_count": 0,
+    }
+    written_files: list[Path] = []
+
+    for batch_index, batch_ids in enumerate(chunks(missing_manga_ids, batch_size), start=1):
+        params = {
+            "limit": len(batch_ids),
+            "ids[]": batch_ids,
+            "includes[]": ["author", "artist", "cover_art"],
+        }
+        file_stem = f"backfill_missing_manga_{batch_index:06d}"
+        request_url = build_url("/manga", params)
+        try:
+            request_url, http_status, payload = fetch_json("/manga", params, timeout_seconds)
+            data = payload.get("data") if isinstance(payload, dict) else []
+            backfilled_count = len(data) if isinstance(data, list) else 0
+            stats["missing_manga_backfilled_count"] += backfilled_count
+            written_files.append(
+                write_raw_response(
+                    output_root=output_root,
+                    crawl_run_id=crawl_run_id,
+                    entity_type="manga",
+                    endpoint="/manga",
+                    request_url=request_url,
+                    request_params=params,
+                    http_status=http_status,
+                    payload=payload,
+                    file_stem=file_stem,
+                )
+            )
+        except (urllib.error.URLError, TimeoutError, OSError) as error:
+            stats["missing_manga_backfill_failed_count"] += len(batch_ids)
+            written_files.append(
+                write_raw_error(
+                    output_root=output_root,
+                    crawl_run_id=crawl_run_id,
+                    entity_type="manga",
+                    endpoint="/manga",
+                    request_url=request_url,
+                    request_params=params,
+                    error=error,
+                    file_stem=file_stem,
+                )
+            )
+            raise
+        time.sleep(pause_seconds)
+
+    return written_files, stats
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Fetch small MangaDex raw datasets.")
     parser.add_argument("--output-root", default="data/raw", help="Raw data output root.")
@@ -203,7 +325,11 @@ def main() -> None:
     parser.add_argument("--timeout-seconds", type=int, default=30)
     parser.add_argument("--pause-seconds", type=float, default=1.0)
     parser.add_argument("--translated-language", default="en")
+    parser.add_argument("--disable-manga-backfill", action="store_true", help="Skip backfilling manga referenced by crawled chapters.")
+    parser.add_argument("--manga-backfill-batch-size", type=int, default=100, help="Manga ids per enrichment request.")
     args = parser.parse_args()
+    if args.manga_backfill_batch_size < 1:
+        parser.error("--manga-backfill-batch-size must be at least 1")
 
     output_root = Path(args.output_root)
     crawl_run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]
@@ -220,6 +346,7 @@ def main() -> None:
 
     status = "success"
     written_files: list[Path] = []
+    crawl_summary: dict[str, Any] = {}
     try:
         for entity_type, endpoint, extra_params in endpoints:
             endpoint_pages = 1 if entity_type == "tag" else args.pages
@@ -238,11 +365,21 @@ def main() -> None:
                     extra_params=extra_params,
                 )
             )
+        if not args.disable_manga_backfill:
+            backfill_files, backfill_stats = backfill_missing_manga(
+                output_root=output_root,
+                crawl_run_id=crawl_run_id,
+                timeout_seconds=args.timeout_seconds,
+                pause_seconds=args.pause_seconds,
+                batch_size=args.manga_backfill_batch_size,
+            )
+            written_files.extend(backfill_files)
+            crawl_summary["manga_backfill"] = backfill_stats
     except Exception:
         status = "failed"
         raise
     finally:
-        crawl_run_file = write_crawl_run(output_root, crawl_run_id, status, started_at, utc_now())
+        crawl_run_file = write_crawl_run(output_root, crawl_run_id, status, started_at, utc_now(), crawl_summary)
 
     print(f"crawl_run_id={crawl_run_id}")
     print(f"crawl_run_file={crawl_run_file}")

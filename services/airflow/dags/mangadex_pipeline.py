@@ -190,6 +190,7 @@ def mangadex_data_pipeline() -> None:
                 "services/dbt",
                 "--profiles-dir",
                 "services/dbt",
+                "--no-partial-parse",
             ],
             env=data_target_env(),
         )

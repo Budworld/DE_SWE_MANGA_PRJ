@@ -8,6 +8,26 @@ Monorepo skeleton for a manga web platform that combines SWE, DE, and AI work:
 
 Current source is **MangaDex only**. Other sources can be added later through source adapters, but Milestone 1 focuses on building a clean data foundation first.
 
+## Milestone 8: Chapter-Manga Enrichment
+
+Milestone 8 fixes chapter/manga mismatch caused by crawling MangaDex `/manga` and `/chapter` as independent collections.
+
+```text
+crawl manga catalog
+  + crawl latest chapters
+  + backfill manga referenced by chapters
+  -> Raw/Bronze/Silver
+  -> dbt Gold with stronger chapter-manga matching
+```
+
+The crawler now extracts manga ids from chapter relationships and fetches missing manga records into the same raw manga folder. Gold catalog and latest feed are filtered for readable manga so the web UI has manga titles and cover thumbnails. Monitoring also reports `chapter_manga_match_rate_percent`.
+
+Detailed docs:
+
+```text
+docs/architecture/milestone-8-chapter-manga-enrichment.md
+```
+
 ## Milestone 7: Airflow ETL to Supabase
 
 Milestone 7 keeps Airflow as the one-click ETL runner while moving manga warehouse data to Supabase Postgres:
