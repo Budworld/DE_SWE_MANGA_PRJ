@@ -29,6 +29,11 @@ cover as (
     from {{ ref('stg_manga_cover') }} mc
     left join {{ ref('stg_cover') }} c on c.source_cover_id = mc.source_cover_id
     order by mc.source_manga_id, c.updated_at desc nulls last
+),
+manga_with_chapters as (
+    select distinct source_manga_id
+    from {{ ref('stg_chapter') }}
+    where source_manga_id is not null
 )
 select
     m.manga_id,
@@ -50,6 +55,7 @@ select
     m.created_at,
     m.updated_at
 from {{ ref('stg_manga') }} m
+join manga_with_chapters mwc on mwc.source_manga_id = m.source_manga_id
 left join author_names a on a.source_manga_id = m.source_manga_id
 left join artist_names ar on ar.source_manga_id = m.source_manga_id
 left join tag_names t on t.source_manga_id = m.source_manga_id
