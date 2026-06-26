@@ -12,6 +12,12 @@ python services/crawler-service/mangadex_raw_crawler.py --limit 10 --pages 1
 
 After crawling chapters, the crawler backfills manga referenced by `relationships[type=manga]` but missing from the catalog crawl. This improves matching between `gold.gold_chapter_list` and `gold.gold_manga_catalog`.
 
+For a more readable catalog, enable manga feed crawling. This fetches chapters directly from `/manga/{id}/feed` for manga in the catalog batch:
+
+```powershell
+python services/crawler-service/mangadex_raw_crawler.py --limit 10 --pages 1 --crawl-manga-feed --max-manga-feed 10 --feed-pages-per-manga 1
+```
+
 Raw collection files use this shape:
 
 ```text
@@ -22,6 +28,12 @@ Backfilled manga records are stored as normal raw manga files:
 
 ```text
 data/raw/mangadex/crawl_run_id=<run_id>/manga/backfill_missing_manga_000001.json
+```
+
+Manga feed chapter records are stored as normal raw chapter files:
+
+```text
+data/raw/mangadex/crawl_run_id=<run_id>/chapter/feed_manga_<manga_id>_page_000001.json
 ```
 
 If a request fails, the crawler writes an error artifact:
