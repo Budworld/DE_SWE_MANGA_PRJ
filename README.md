@@ -8,6 +8,27 @@ Monorepo skeleton for a manga web platform that combines SWE, DE, and AI work:
 
 Current source is **MangaDex only**. Other sources can be added later through source adapters, but Milestone 1 focuses on building a clean data foundation first.
 
+## Milestone 9: Manga Feed Crawl
+
+Milestone 9 expands the readable catalog by crawling MangaDex `/manga/{id}/feed` for manga in each catalog batch:
+
+```text
+crawl manga catalog
+  + crawl global latest chapters
+  + crawl manga-specific chapter feeds
+  + backfill manga referenced by chapters
+  -> Raw/Bronze/Silver
+  -> dbt Gold readable catalog/latest
+```
+
+This keeps Raw/Silver lineage intact while giving the web UI more manga that actually have chapters.
+
+Detailed docs:
+
+```text
+docs/architecture/milestone-9-manga-feed-crawl.md
+```
+
 ## Milestone 8: Chapter-Manga Enrichment
 
 Milestone 8 fixes chapter/manga mismatch caused by crawling MangaDex `/manga` and `/chapter` as independent collections.

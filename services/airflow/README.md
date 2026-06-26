@@ -112,9 +112,15 @@ pages: 1
 start_offset: 0
 pause_seconds: 0.5
 translated_language: en
+crawl_manga_feed: true
+feed_limit: 100
+feed_pages_per_manga: 1
+max_manga_feed: 50
 ```
 
 Increase `start_offset` when you want the next DAG run to fetch a different MangaDex page instead of crawling the first page again.
+
+`crawl_manga_feed` fetches `/manga/{id}/feed` for manga in the current catalog batch. This is the preferred way to grow the readable web catalog because it guarantees crawled manga also have chapters.
 
 ## Task Order
 

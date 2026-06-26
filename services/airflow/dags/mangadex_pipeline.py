@@ -57,6 +57,15 @@ def param_value(name: str, default: Any) -> Any:
     return context["params"].get(name, default)
 
 
+def param_bool(name: str, default: bool) -> bool:
+    value = param_value(name, default)
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y"}
+    return bool(value)
+
+
 def run_dir(layer: str, crawl_run_id: str) -> str:
     return str(PROJECT_ROOT / "data" / layer / SOURCE / f"crawl_run_id={crawl_run_id}")
 
@@ -94,6 +103,10 @@ def data_target_env() -> dict[str, str]:
         "start_offset": 0,
         "pause_seconds": 0.5,
         "translated_language": "en",
+        "crawl_manga_feed": True,
+        "feed_limit": 100,
+        "feed_pages_per_manga": 1,
+        "max_manga_feed": 50,
     },
 )
 def mangadex_data_pipeline() -> None:
@@ -105,25 +118,36 @@ def mangadex_data_pipeline() -> None:
 
     @task
     def crawl_mangadex_raw() -> str:
-        stdout = run_project_command(
-            [
-                sys.executable,
-                "services/crawler-service/mangadex_raw_crawler.py",
-                "--output-root",
-                "data/raw",
-                "--limit",
-                str(param_value("limit", 10)),
-                "--pages",
-                str(param_value("pages", 1)),
-                "--start-offset",
-                str(param_value("start_offset", 0)),
-                "--pause-seconds",
-                str(param_value("pause_seconds", 0.5)),
-                "--translated-language",
-                str(param_value("translated_language", "en")),
-            ]
-        )
+        command = [
+            sys.executable,
+            "services/crawler-service/mangadex_raw_crawler.py",
+            "--output-root",
+            "data/raw",
+            "--limit",
+            str(param_value("limit", 10)),
+            "--pages",
+            str(param_value("pages", 1)),
+            "--start-offset",
+            str(param_value("start_offset", 0)),
+            "--pause-seconds",
+            str(param_value("pause_seconds", 0.5)),
+            "--translated-language",
+            str(param_value("translated_language", "en")),
+        ]
+        if param_bool("crawl_manga_feed", True):
+            command.extend(
+                [
+                    "--crawl-manga-feed",
+                    "--feed-limit",
+                    str(param_value("feed_limit", 100)),
+                    "--feed-pages-per-manga",
+                    str(param_value("feed_pages_per_manga", 1)),
+                    "--max-manga-feed",
+                    str(param_value("max_manga_feed", 50)),
+                ]
+            )
 
+        stdout = run_project_command(command)
         match = re.search(r"^crawl_run_id=(?P<crawl_run_id>[^\s]+)$", stdout, flags=re.MULTILINE)
         if not match:
             raise RuntimeError("Crawler completed but did not print crawl_run_id=<id>.")

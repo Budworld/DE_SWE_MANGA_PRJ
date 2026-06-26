@@ -316,6 +316,77 @@ def backfill_missing_manga(
     return written_files, stats
 
 
+def crawl_manga_feed(
+    output_root: Path,
+    crawl_run_id: str,
+    translated_language: str,
+    limit: int,
+    pages_per_manga: int,
+    max_manga: int,
+    timeout_seconds: int,
+    pause_seconds: float,
+) -> tuple[list[Path], dict[str, int]]:
+    raw_run_dir = output_root / SOURCE / f"crawl_run_id={crawl_run_id}"
+    manga_ids = sorted(entity_ids_from_raw_files(raw_run_dir, "manga"))[:max_manga]
+    stats = {
+        "feed_manga_selected_count": len(manga_ids),
+        "feed_request_count": 0,
+        "feed_chapter_count": 0,
+        "feed_failed_request_count": 0,
+    }
+    written_files: list[Path] = []
+
+    for manga_id in manga_ids:
+        endpoint = f"/manga/{manga_id}/feed"
+        for page_index in range(pages_per_manga):
+            params = {
+                "limit": limit,
+                "offset": page_index * limit,
+                "translatedLanguage[]": [translated_language],
+                "includes[]": ["manga", "scanlation_group"],
+                "order[chapter]": "asc",
+            }
+            file_stem = f"feed_manga_{manga_id}_page_{page_index + 1:06d}"
+            request_url = build_url(endpoint, params)
+            stats["feed_request_count"] += 1
+            try:
+                request_url, http_status, payload = fetch_json(endpoint, params, timeout_seconds)
+                data = payload.get("data") if isinstance(payload, dict) else []
+                if isinstance(data, list):
+                    stats["feed_chapter_count"] += len(data)
+                written_files.append(
+                    write_raw_response(
+                        output_root=output_root,
+                        crawl_run_id=crawl_run_id,
+                        entity_type="chapter",
+                        endpoint=endpoint,
+                        request_url=request_url,
+                        request_params=params,
+                        http_status=http_status,
+                        payload=payload,
+                        file_stem=file_stem,
+                    )
+                )
+            except (urllib.error.URLError, TimeoutError, OSError) as error:
+                stats["feed_failed_request_count"] += 1
+                written_files.append(
+                    write_raw_error(
+                        output_root=output_root,
+                        crawl_run_id=crawl_run_id,
+                        entity_type="chapter",
+                        endpoint=endpoint,
+                        request_url=request_url,
+                        request_params=params,
+                        error=error,
+                        file_stem=file_stem,
+                    )
+                )
+                raise
+            time.sleep(pause_seconds)
+
+    return written_files, stats
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Fetch small MangaDex raw datasets.")
     parser.add_argument("--output-root", default="data/raw", help="Raw data output root.")
@@ -325,9 +396,19 @@ def main() -> None:
     parser.add_argument("--timeout-seconds", type=int, default=30)
     parser.add_argument("--pause-seconds", type=float, default=1.0)
     parser.add_argument("--translated-language", default="en")
+    parser.add_argument("--crawl-manga-feed", action="store_true", help="Fetch /manga/{id}/feed for crawled manga.")
+    parser.add_argument("--feed-limit", type=int, default=100, help="Chapter feed items per manga request.")
+    parser.add_argument("--feed-pages-per-manga", type=int, default=1, help="Feed pages to fetch per manga.")
+    parser.add_argument("--max-manga-feed", type=int, default=50, help="Maximum crawled manga ids to fetch feeds for.")
     parser.add_argument("--disable-manga-backfill", action="store_true", help="Skip backfilling manga referenced by crawled chapters.")
     parser.add_argument("--manga-backfill-batch-size", type=int, default=100, help="Manga ids per enrichment request.")
     args = parser.parse_args()
+    if args.feed_limit < 1:
+        parser.error("--feed-limit must be at least 1")
+    if args.feed_pages_per_manga < 1:
+        parser.error("--feed-pages-per-manga must be at least 1")
+    if args.max_manga_feed < 1:
+        parser.error("--max-manga-feed must be at least 1")
     if args.manga_backfill_batch_size < 1:
         parser.error("--manga-backfill-batch-size must be at least 1")
 
@@ -365,6 +446,19 @@ def main() -> None:
                     extra_params=extra_params,
                 )
             )
+        if args.crawl_manga_feed:
+            feed_files, feed_stats = crawl_manga_feed(
+                output_root=output_root,
+                crawl_run_id=crawl_run_id,
+                translated_language=args.translated_language,
+                limit=args.feed_limit,
+                pages_per_manga=args.feed_pages_per_manga,
+                max_manga=args.max_manga_feed,
+                timeout_seconds=args.timeout_seconds,
+                pause_seconds=args.pause_seconds,
+            )
+            written_files.extend(feed_files)
+            crawl_summary["manga_feed"] = feed_stats
         if not args.disable_manga_backfill:
             backfill_files, backfill_stats = backfill_missing_manga(
                 output_root=output_root,
